@@ -16,6 +16,7 @@
     font-family:"Inter Tight",system-ui,sans-serif;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;user-select:none;-webkit-user-select:none;
+    touch-action:manipulation;
   }
   ::selection{background:#f5f5f5;color:#0a0a0a}
   h1{
@@ -32,10 +33,59 @@
     display:inline-block;
     transition:transform .5s cubic-bezier(.16,1,.3,1);
   }
+  body.danger{animation:bgflick .5s steps(2) infinite}
+  @keyframes bgflick{0%,100%{background:#0a0a0a}50%{background:#160404}}
+  body.danger h1{animation:shk .3s linear infinite}
+  @keyframes shk{
+    0%,100%{transform:translate(0,0)}25%{transform:translate(-5px,2px) skewX(.6deg)}
+    50%{transform:translate(4px,-3px)}75%{transform:translate(-3px,-2px) skewX(-.6deg)}
+  }
+  body.danger h1 span{transition:none}
+  body.danger h1.drgb span:nth-child(odd){text-shadow:-4px 0 0 rgba(255,0,60,.75)}
+  body.danger h1.drgb span:nth-child(even){text-shadow:4px 0 0 rgba(0,255,255,.75)}
+  #feed{
+    position:fixed;left:22px;bottom:20px;z-index:10;
+    font-family:"JetBrains Mono",monospace;font-size:11px;line-height:1.9;
+    letter-spacing:.06em;color:#7a7a7a;pointer-events:none;opacity:0;transition:opacity .3s;
+  }
+  body.danger #feed{opacity:1}
+  #feed .r{color:#ff2b2b} #feed .g{color:#00e065}
+  #recon{position:fixed;inset:0;z-index:50;background:rgba(5,0,0,.95);
+    display:none;align-items:center;justify-content:center;
+    font-family:"JetBrains Mono",monospace;padding:20px}
+  #recon.on{display:flex}
+  #recon .box{width:min(580px,92vw);max-height:86vh;overflow:auto;
+    border:1px solid #3a1010;padding:26px 28px;background:#000}
+  #recon h2{font-size:12px;letter-spacing:.4em;color:#ff2b2b;font-weight:400;margin-bottom:14px}
+  #recon .r{display:flex;justify-content:space-between;gap:16px;font-size:11px;
+    letter-spacing:.06em;padding:5px 0;border-bottom:1px solid #1c0d0d}
+  #recon .k{color:#6b3a3a;flex-shrink:0} #recon .v{color:#d8d8d8;text-align:right;word-break:break-all}
+  #recon .foot{margin-top:16px;font-size:10px;letter-spacing:.1em;line-height:1.9;color:#7a4a4a}
+  #recon .esc{margin-top:10px;font-size:10px;letter-spacing:.3em;color:#3d3d3d}
+  #term{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.93);display:none;
+    font-family:"JetBrains Mono",monospace;padding:8vh 8vw;color:#c9c9c9}
+  #term.on{display:block}
+  #term-out{font-size:13px;line-height:2;white-space:pre-wrap;word-break:break-all}
+  #term-out .p{color:#00e065} #term-out .r{color:#ff2b2b} #term-out .d{color:#555}
+  #term-line{display:flex;gap:10px;font-size:13px;margin-top:6px}
+  #term-line .p{color:#00e065;white-space:nowrap}
+  #term-in{background:none;border:none;outline:none;color:#fff;flex:1;
+    font:inherit;letter-spacing:inherit}
+  #mrain{position:fixed;inset:0;z-index:59;display:none;pointer-events:none}
+  #mrain.on{display:block}
+  @media(max-width:640px){
+    #term{padding:5vh 5vw}
+    #term-out,#term-line,#term-in{font-size:16px}
+    #recon .box{padding:20px}
+  }
 </style>
 </head>
 <body>
 <h1 aria-label="fr6ey"><span>f</span><span>r</span><span>6</span><span>e</span><span>y</span></h1>
+<div id="feed"></div>
+<div id="recon"><div class="box"><h2>YOU.ARE.VISIBLE</h2><div id="recon-rows"></div><div class="foot">everything above was read by this page in under a second.<br>now imagine a page that isn't friendly.</div><div class="esc">ESC / CLICK to disappear</div></div></div>
+<canvas id="mrain"></canvas>
+<div id="term"><div id="term-out"></div><div id="term-line"><span class="p" id="term-ps1">fr6ey@void:/home/fr6ey$</span><input id="term-in" autocomplete="off" spellcheck="false" placeholder="type help"></div></div>
 <script>
 (()=>{
 const letters = [...document.querySelectorAll('h1 span')];
@@ -55,7 +105,476 @@ addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; }, {passi
   });
 })();
 let gifted = false;
+// ---- hidden danger mode: pure theater, touches nothing ----
+const feed = document.getElementById('feed');
+const h1 = document.querySelector('h1');
+const POOL = ['f','r','6','e','y'];
+let danger = false, dangerT = null, scrIv = null, buf = '';
+const ATTACK = [
+  '» scanning visitor … <span class="r">target locked</span>',
+  '» injecting love.exe … <span class="g">ok</span>',
+  '» payload: 1 cat (harmless) … <span class="g">delivered</span>',
+  '» covering tracks … <span class="g">clean</span>',
+  '» done. <span class="g">nothing was harmed.</span>'
+];
+function say(html){
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  feed.appendChild(d);
+  while(feed.children.length > 5) feed.firstChild.remove();
+}
+function startDanger(){
+  if(danger) return;
+  danger = true;
+  document.body.classList.add('danger');
+  h1.classList.add('drgb');
+  feed.innerHTML = '';
+  console.log('%c⚠ DANGER MODE — relax, it is all fake.', 'color:#ff2b2b;font-family:monospace');
+  ATTACK.forEach((l, i) => setTimeout(() => danger && say(l), 500 + i*900));
+  scrIv = setInterval(() => {
+    if(!danger) return;
+    letters.forEach(s => { s.textContent = POOL[(Math.random()*POOL.length)|0]; });
+  }, 90);
+  dangerT = setTimeout(stopDanger, 6200);
+}
+function stopDanger(){
+  if(!danger) return;
+  danger = false;
+  clearTimeout(dangerT); clearInterval(scrIv);
+  document.body.classList.remove('danger');
+  h1.classList.remove('drgb');
+  ['f','r','6','e','y'].forEach((c, i) => letters[i].textContent = c);
+  feed.innerHTML = '';
+  console.log('%crelax. nothing happened. — fr6ey', 'color:#666;font-family:monospace');
+}
+// ---- hidden recon layer: real client-side fingerprinting, read-only ----
+const recon = document.getElementById('recon');
+const reconRows = document.getElementById('recon-rows');
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function dhash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))>>>0;return h.toString(16).padStart(8,'0');}
+function fpCanvas(){
+  try{
+    const c=document.createElement('canvas');c.width=220;c.height=40;
+    const x=c.getContext('2d');
+    x.fillStyle='#111';x.fillRect(0,0,220,40);
+    x.font='16px monospace';x.fillStyle='#eee';
+    x.fillText('fr6ey sees you',8,26);
+    return dhash(c.toDataURL()).slice(0,12);
+  }catch(e){return 'blocked';}
+}
+function fpGPU(){
+  try{
+    const c=document.createElement('canvas');
+    const gl=c.getContext('webgl')||c.getContext('experimental-webgl');
+    if(!gl)return 'hidden';
+    const d=gl.getExtension('WEBGL_debug_renderer_info');
+    return d?gl.getParameter(d.UNMASKED_RENDERER_WEBGL):'masked';
+  }catch(e){return 'blocked';}
+}
+function openRecon(){
+  const n=navigator,s=screen;
+  const rows=[
+    ['user agent',n.userAgent],
+    ['platform',n.platform||'—'],
+    ['language',n.language+' · '+((n.languages||[]).slice(0,3).join(', '))],
+    ['timezone',(Intl.DateTimeFormat().resolvedOptions().timeZone||'—')],
+    ['screen',s.width+'×'+s.height+' · '+s.colorDepth+'-bit'],
+    ['viewport',innerWidth+'×'+innerHeight+' · dpr '+devicePixelRatio],
+    ['cpu / ram',(n.hardwareConcurrency||'?')+' cores · '+(n.deviceMemory||'?')+' gb'],
+    ['touch',('ontouchstart'in window)?'yes':'no'],
+    ['cookies',n.cookieEnabled?'enabled':'blocked'],
+    ['canvas fp',fpCanvas()],
+    ['gpu',fpGPU()]
+  ];
+  reconRows.innerHTML=rows.map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(String(r[1])).slice(0,110)}</span></div>`).join('');
+  recon.classList.add('on');
+}
+function closeRecon(){recon.classList.remove('on');}
+recon.addEventListener('click',closeRecon);
+addEventListener('keydown', e => {
+  if(e.key === 'Escape'){ stopDanger(); closeRecon(); return; }
+  if(e.key.length !== 1 || danger || recon.classList.contains('on')) return;
+  buf = (buf + e.key.toLowerCase()).slice(-6);
+  if(buf === 'danger') startDanger();
+  if(buf.endsWith('who')) openRecon();
+});
+console.log('%chint: type "danger" · "who" · press ` · or triple-tap (mobile)', 'color:#333;font-family:monospace');
+// ---- hidden terminal: a real shell for the portfolio ----
+const term = document.getElementById('term');
+const termOut = document.getElementById('term-out');
+const termIn = document.getElementById('term-in');
+function tprint(html){
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  termOut.appendChild(d);
+  while(termOut.children.length > 40) termOut.firstChild.remove();
+}
+function openTerm(){
+  term.classList.add('on');
+  termIn.value = '';
+  setTimeout(() => termIn.focus(), 50);
+}
+function closeTerm(){ term.classList.remove('on'); termIn.blur(); }
+// ---- full shell: virtual fs · history · tab-complete · real commands ----
+function F(content){ return {t:'f', c:content}; }
+function D(kids){ return {t:'d', k:(kids||{})}; }
+const FS = D({ home: D({ fr6ey: D({
+  'readme.txt': F('fr6ey — security researcher.\nthis shell is real. everything in here works.\ntry: ls · cat socials.txt · ./run.sh'),
+  'socials.txt': F('github.com/fr6ey\nyoutube.com/@fr6ey\nx.com/fr6ey'),
+  'run.sh': F('#!/bin/sh\necho "wake up, neo…"'),
+  notes: D({ 'todo.txt': F('- own nothing\n- take nothing\n- leave a cat') }),
+  secrets: D({ '.hidden': F('you found it.\nthe real treasure was the cat.\ntype: getcat') })
+})}), etc: D({ motd: F('welcome to the void.') }) });
+let cwd = ['home','fr6ey'];
+const ps1 = () => `fr6ey@void:/${cwd.join('/')}$`;
+function setPs1(){ document.getElementById('term-ps1').textContent = ps1(); }
+function norm(base, input){
+  let parts;
+  if(!input || input === '~') return ['home','fr6ey'];
+  if(input[0] === '/') parts = [];
+  else if(input === '~' || input.indexOf('~/') === 0) parts = ['home','fr6ey'];
+  else parts = base.slice();
+  const rest = input[0] === '/' ? input : (input === '~' ? '' : (input.indexOf('~/') === 0 ? input.slice(2) : input));
+  const segs = rest.split('/');
+  for(let i = 0; i < segs.length; i++){
+    const s = segs[i];
+    if(!s || s === '.') continue;
+    if(s === '..'){ parts.pop(); continue; }
+    parts.push(s);
+  }
+  return parts;
+}
+function vget(parts){
+  let n = FS;
+  for(let i = 0; i < parts.length; i++){
+    if(!n || n.t !== 'd' || !(parts[i] in n.k)) return null;
+    n = n.k[parts[i]];
+  }
+  return n;
+}
+const txt = s => esc(s).replace(/\n/g, '<br>');
+function tok(raw){
+  const m = raw.match(/"([^"]*)"|'([^']*)'|\S+/g) || [];
+  return m.map(t => ((t[0] === '"' && t[t.length-1] === '"') || (t[0] === "'" && t[t.length-1] === "'")) ? t.slice(1,-1) : t);
+}
+function runSh(node){
+  const out = [];
+  const lines = node.c.split('\n');
+  for(let i = 0; i < lines.length; i++){
+    const t = lines[i].trim();
+    if(!t || t[0] === '#') continue;
+    const m = t.match(/^echo\s+(.*)$/);
+    out.push(m ? m[1].replace(/^["']|["']$/g, '') : ('(no exec: ' + t + ')'));
+  }
+  return out.join('\n');
+}
+function dlcat(){
+  try{
+    const a = document.createElement('a');
+    a.href = 'cat.jpg';
+    a.download = 'love-from-fr6ey.jpg';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return true;
+  }catch(e){ return false; }
+}
+const SH = {
+  help: () => 'fs: <span class="p">ls · cd · pwd · cat · echo · mkdir · touch · rm</span><br>learn: <span class="p">learn · ctf · cheat</span> — free training, ctf ladder, lab payloads<br>sys: whoami · date · uname · history · clear · exit<br>fun: socials · open · getcat · matrix · who · danger · sudo',
+  ls: (a) => {
+    let t = null;
+    for(let i = 0; i < a.length; i++) if(a[i][0] !== '-') t = a[i];
+    const showAll = a.indexOf('-a') !== -1 || a.indexOf('-la') !== -1 || a.indexOf('-al') !== -1;
+    const node = t ? vget(norm(cwd, t)) : vget(cwd);
+    if(!node) return `<span class="r">no such file:</span> ${esc(t)}`;
+    if(node.t !== 'd') return esc(t);
+    const names = Object.keys(node.k).filter(n => showAll || n[0] !== '.').sort();
+    if(!names.length) return '<span class="d">(empty)</span>';
+    return names.map(n => node.k[n].t === 'd' ? `<span class="p">${esc(n)}/</span>` : esc(n)).join('   ');
+  },
+  cd: (a) => {
+    const p = norm(cwd, a[0]);
+    const n = vget(p);
+    if(!n) return `<span class="r">no such directory:</span> ${esc(a[0] || '')}`;
+    if(n.t !== 'd') return `<span class="r">not a directory:</span> ${esc(a[0])}`;
+    cwd = p; setPs1(); return null;
+  },
+  pwd: () => esc('/' + cwd.join('/')),
+  cat: (a) => {
+    if(!a[0]) return 'usage: cat &lt;file&gt;';
+    const n = vget(norm(cwd, a[0]));
+    if(!n) return `<span class="r">no such file:</span> ${esc(a[0])}`;
+    if(n.t !== 'd') return txt(n.c);
+    return `<span class="r">is a directory:</span> ${esc(a[0])}`;
+  },
+  echo: (a, raw) => {
+    const m = raw.match(/^(.*?)\s*(>>?)\s*(\S+)\s*$/);
+    if(m && m[2]){
+      const text = m[1].replace(/^echo\s+/, '');
+      const p = norm(cwd, m[3]);
+      const par = vget(p.slice(0, -1));
+      const nm = p[p.length-1];
+      if(!par || par.t !== 'd') return '<span class="r">no such path</span>';
+      const cur = (par.k[nm] && par.k[nm].t === 'f') ? par.k[nm].c : '';
+      par.k[nm] = F(m[2] === '>>' ? (cur ? cur + '\n' + text : text) : text);
+      return null;
+    }
+    const out = raw.replace(/^echo\s*/, '');
+    return out ? esc(out) : '&nbsp;';
+  },
+  mkdir: (a) => {
+    if(!a[0]) return 'usage: mkdir &lt;dir&gt;';
+    const p = norm(cwd, a[0]);
+    const par = vget(p.slice(0, -1));
+    const nm = p[p.length-1];
+    if(!par || par.t !== 'd') return '<span class="r">no such path</span>';
+    if(nm in par.k) return `<span class="r">exists:</span> ${esc(a[0])}`;
+    par.k[nm] = D(); return null;
+  },
+  touch: (a) => {
+    if(!a[0]) return 'usage: touch &lt;file&gt;';
+    const p = norm(cwd, a[0]);
+    const par = vget(p.slice(0, -1));
+    const nm = p[p.length-1];
+    if(!par || par.t !== 'd') return '<span class="r">no such path</span>';
+    if(!(nm in par.k)) par.k[nm] = F('');
+    return null;
+  },
+  rm: (a) => {
+    const rec = a.indexOf('-r') !== -1 || a.indexOf('-rf') !== -1;
+    let t = null;
+    for(let i = 0; i < a.length; i++) if(a[i][0] !== '-') t = a[i];
+    if(!t) return 'usage: rm [-r] &lt;path&gt;';
+    const p = norm(cwd, t);
+    const par = vget(p.slice(0, -1));
+    const nm = p[p.length-1];
+    const n = (par && par.k) ? par.k[nm] : null;
+    if(!n) return `<span class="r">no such file:</span> ${esc(t)}`;
+    if(n.t === 'd' && !rec) return `<span class="r">is a directory</span> <span class="d">(use rm -r)</span>`;
+    delete par.k[nm]; return null;
+  },
+  history: () => hist.map((h, i) => `<span class="d">${String(i+1).padStart(3, ' ')}  </span>${esc(h)}`).join('<br>') || '<span class="d">(empty)</span>',
+  whoami: () => `fr6ey — security researcher<br><span class="d">${esc(navigator.platform)} · ${esc(navigator.language)} · ${screen.width}×${screen.height}</span>`,
+  uname: () => 'void 6.0.0-fr6ey x86_64 GNU/void',
+  date: () => esc(new Date().toUTCString()),
+  socials: () => 'github.com/fr6ey<br>youtube.com/@fr6ey<br>x.com/fr6ey',
+  open: (a) => {
+    const S = {github:'https://github.com/fr6ey', youtube:'https://youtube.com/@fr6ey', x:'https://x.com/fr6ey'};
+    const t = (a[0] || '').toLowerCase();
+    if(S[t]){ window.open(S[t], '_blank'); return `opening ${esc(t)}…`; }
+    return 'usage: open <span class="p">github</span> · youtube · x';
+  },
+  getcat: () => dlcat() ? '<span class="p">cat deployed to your downloads.</span>' : '<span class="r">download blocked</span>',
+  learn: (a) => {
+    const t = (a[0] || '').toLowerCase();
+    if(!t) return 'topics: ' + Object.keys(LEARN).join(' · ') + '<br><span class="d">usage: learn &lt;topic&gt; — same files live in ~/learn/</span>';
+    if(!LEARN[t]) return `<span class="r">no such topic:</span> ${esc(a[0])}`;
+    return `<span class="p">## ${esc(t)}</span><br>` + txt(LEARN[t]);
+  },
+  ctf: () => `<span class="p">## the ladder</span><br>` + txt(CTFS),
+  cheat: (a) => {
+    const t = (a[0] || '').toLowerCase();
+    if(!t || !CHEAT[t]) return 'cheats: ' + Object.keys(CHEAT).join(' · ') + ' <span class="d">(your lab targets only)</span>';
+    return `<span class="p">## cheat: ${esc(t)}</span> <span class="d">(lab targets only)</span><br>` + txt(CHEAT[t]);
+  },
+  sudo: () => '<span class="r">user fr6ey is not in the sudoers file.</span> this incident will be reported to the cat.',
+  clear: () => { termOut.innerHTML = ''; return null; },
+  exit: () => { closeTerm(); return null; },
+  who: () => { closeTerm(); openRecon(); return null; },
+  danger: () => { closeTerm(); startDanger(); return '<span class="r">breach theater engaged.</span>'; },
+  matrix: () => { rain(); return '<span class="p">wake up, neo…</span>'; }
+};
+function run(raw){
+  const toks = tok(raw);
+  if(!toks.length) return null;
+  const cmd = toks[0], args = toks.slice(1);
+  if(cmd.indexOf('/') !== -1 || cmd === '~'){
+    const n = vget(norm(cwd, cmd));
+    if(!n) return `<span class="r">no such file:</span> ${esc(cmd)}`;
+    if(n.t === 'd') return `<span class="r">is a directory:</span> ${esc(cmd)}`;
+    if(/\.sh$/.test(cmd)) return txt(runSh(n));
+    return `<span class="r">permission denied:</span> ${esc(cmd)} <span class="d">— try cat</span>`;
+  }
+  const fn = SH[cmd.toLowerCase()];
+  if(!fn) return `<span class="r">command not found:</span> ${esc(cmd)} <span class="d">— try help</span>`;
+  return fn(args, raw);
+}
+const LEARN = {
+start: `so you want to be dangerous (legally). the path:
+1. linux + terminal comfort — overthewire bandit (overthewire.org)
+2. networking basics — nmap book, wireshark, tryhackme net rooms
+3. web hacking — portswigger academy (free, the bible)
+4. pick a lane: crypto → cryptohack · binary → pwn.college · forensics → ctf challenges
+5. play: picoctf → tryhackme → hackthebox
+6. read disclosed hackerone reports weekly. steal mindsets, not payloads.
+rule: only touch systems you own or that invite you (ctf / lab / bounty scope).`,
+web: `the web runs everything, so learn to break it first.
+- portswigger.net/web-security — free academy + labs. start here, finish xss + sqli paths.
+- owasp top 10 — owasp.org/www-project-top-ten — the vocabulary of the trade.
+- hacktricks.xyz — the technique encyclopedia. bookmark it for life.
+- payloadsallthethings (github swisskyrepo) — payload reference, not a substitute for understanding.
+try in shell: cheat xss · cheat sqli · cheat lfi`,
+xss: `cross-site scripting = injecting js into someone else's page.
+contexts decide payloads — html, attribute, js string, dom sink.
+try in shell: cheat xss
+labs: portswigger.net/web-security/cross-site-scripting (all apprentice labs first)`,
+sqli: `sql injection = breaking out of the query string.
+union-based first, then blind, then out-of-band. learn to read errors.
+try in shell: cheat sqli
+labs: portswigger.net/web-security/sql-injection
+defense to learn: parameterized queries. the bug is always string concatenation.`,
+crypto: `don't roll your own. break others'.
+- cryptohack.org — gamified, starts at zero.
+- cryptopals.com — the classic 8 sets. rite of passage.
+- dcode.fr + cyberchef (gchq.github.io/CyberChef) — decode anything fast.`,
+forensics: `every file confesses eventually.
+- strings + binwalk + exiftool on any suspicious file (your lab only).
+- volatility for memory dumps, autopsy for disk images.
+- wireshark: file → export objects from pcaps.
+practice: picoctf + root-me forensics tracks.`,
+osint: `open-source intel: finding what people leak.
+- osintframework.com — the map of every tool.
+- google dorking: site: filetype: intitle: inurl: — practice on yourself.
+- sherlock (github) — username recon across sites. your own username first.
+- exif/metadata: images leak gps + devices. check your own photos.
+rule: research, never stalk. public info only.`,
+network: `packets don't lie.
+- nmap.org/book — scanning, done right.
+- wireshark.org + their sample captures — follow tcp streams, spot creds in YOUR lab pcaps.
+- tryhackme: nmap + wireshark rooms.`,
+privesc: `getting in is step one. becoming root is step two.
+- gtfobins.github.io — unix binaries that betray their owners.
+- lolbas-project.github.io — the windows twin.
+- hacktricks: linux + windows privilege escalation chapters.
+- peass-ng (github carlospolop) — enumeration scripts for YOUR lab boxes.
+practice: tryhackme privesc rooms, then vulnhub vms.`,
+reversing: `reading what was never meant to be read.
+- crackmes.one — graded crackmes, start easy.
+- ghidra (free) or ida free — disassemble your own binaries.
+- liveoverflow (youtube) — binary exploitation taught beautifully.
+- pwn.college — free, university-grade binary program.`,
+bugbounty: `get paid to hack legally.
+- hackerone.com/hacktivity — read DISCLOSED reports. the cheat code: real bugs, real payouts, real methodology.
+- bugcrowd university — free methodology courses.
+- portswigger academy first — most web bounties are academy topics in the wild.
+- nahamsec + stok (youtube) — recon workflows.
+start: wide-scope VDPs, recon findings, clean reports.`
+};
+const CTFS = `start here, in order:
+1. picoctf.org — the school of ctf. free, beginner, do first.
+2. overthewire.org (bandit → natas) — linux + web basics over ssh. rites of passage.
+3. tryhackme.com — guided rooms, every lane.
+4. cryptohack.org — crypto-only gym.
+5. root-me.org — 500+ challenges, all lanes.
+6. hackthebox.com — the arena. start at "starting point".
+7. pwn.college — free binary mastery.
+8. vulnhub.com — downloadable lab vms for YOUR homelab.
+pro tip: read writeups after solving (or after 4h stuck).`;
+const CHEAT = {
+xss: `start: portswigger.net/web-security/cross-site-scripting
+bible: portswigger xss cheat-sheet (every context, every vector)
+payloads: github swisskyrepo/PayloadsAllTheThings - XSS Injection
+practice: portswigger labs, apprentice path first`,
+sqli: `start: portswigger.net/web-security/sql-injection
+bible: portswigger sql-injection cheat-sheet
+payloads: PayloadsAllTheThings - SQL Injection
+practice: portswigger labs + sqli-labs on YOUR localhost`,
+lfi: `start: portswigger.net/web-security/file-path-traversal
+payloads: PayloadsAllTheThings - File Inclusion / Path Traversal
+practice: portswigger labs`,
+shell: `reference: PayloadsAllTheThings - Reverse Shell Cheatsheet
+listener guide: hacktricks reverse-shell section
+lab-only. never point these anywhere you do not own.`
+};
+// publish learning wing into the fs: ~/learn/*.txt + ~/ctf-ladder.txt
+(function(){
+  const home = FS.k.home.k.fr6ey.k;
+  home.learn = D({});
+  for(const k of Object.keys(LEARN)) home.learn.k[k + '.txt'] = F(LEARN[k]);
+  home['ctf-ladder.txt'] = F(CTFS);
+})();
+const hist = [];
+let hi = 0;
+function complete(){
+  const v = termIn.value;
+  const sp = v.lastIndexOf(' ');
+  if(sp === -1){
+    const names = Object.keys(SH).filter(n => n.indexOf(v) === 0);
+    if(names.length === 1) termIn.value = names[0] + ' ';
+    else if(names.length > 1) tprint(names.map(esc).join('   '));
+    return;
+  }
+  const head = v.slice(0, sp+1), frag = v.slice(sp+1);
+  const sl = frag.lastIndexOf('/');
+  const dirFrag = sl === -1 ? '' : frag.slice(0, sl+1);
+  const base = sl === -1 ? frag : frag.slice(sl+1);
+  const dir = vget(norm(cwd, dirFrag || '.'));
+  if(!dir || dir.t !== 'd') return;
+  const opts = Object.keys(dir.k).filter(n => n.indexOf(base) === 0);
+  if(opts.length === 1){
+    const o = opts[0];
+    termIn.value = head + dirFrag + o + (dir.k[o].t === 'd' ? '/' : ' ');
+  }
+  else if(opts.length > 1) tprint(opts.map(esc).join('   '));
+}
+termIn.addEventListener('keydown', e => {
+  e.stopPropagation();
+  if(e.key === 'Escape'){ closeTerm(); return; }
+  if(e.key === 'ArrowUp'){ e.preventDefault(); if(hi > 0){ hi--; termIn.value = hist[hi] || ''; } return; }
+  if(e.key === 'ArrowDown'){ e.preventDefault(); if(hi < hist.length){ hi++; termIn.value = hist[hi] || ''; } return; }
+  if(e.key === 'Tab'){ e.preventDefault(); complete(); return; }
+  if(e.key !== 'Enter') return;
+  const raw = termIn.value;
+  termIn.value = '';
+  hist.push(raw); hi = hist.length;
+  tprint(`<span class="p">${esc(ps1())}</span> ${esc(raw)}`);
+  if(!raw.trim()) return;
+  const out = run(raw.trim());
+  if(out) tprint(out);
+});
+term.addEventListener('click', e => { if(e.target === term) closeTerm(); });
+// matrix rain, 6 seconds
+let raining = false;
+function rain(){
+  if(raining) return;
+  raining = true;
+  const cv = document.getElementById('mrain');
+  cv.classList.add('on');
+  cv.width = innerWidth; cv.height = innerHeight;
+  const cx = cv.getContext('2d');
+  const cols = Math.floor(innerWidth/16);
+  const drops = [];
+  for(let i = 0; i < cols; i++) drops.push(Math.random()*-50);
+  const glyphs = 'fr6ey01<>[]#$+'.split('');
+  const end = performance.now() + 6000;
+  (function frame(){
+    cx.fillStyle = 'rgba(0,0,0,0.12)';
+    cx.fillRect(0, 0, cv.width, cv.height);
+    cx.font = '15px monospace';
+    for(let i = 0; i < cols; i++){
+      const g = glyphs[(Math.random()*glyphs.length)|0];
+      cx.fillStyle = Math.random() < .04 ? '#fff' : '#00e065';
+      cx.fillText(g, i*16, drops[i]*16);
+      if(drops[i]*16 > cv.height && Math.random() > .976) drops[i] = 0;
+      drops[i]++;
+    }
+    if(performance.now() < end) requestAnimationFrame(frame);
+    else{ cv.classList.remove('on'); raining = false; }
+  })();
+}
+addEventListener('keydown', (e) => {
+  if(e.key === '`' && !term.classList.contains('on')){ e.preventDefault(); openTerm(); }
+});
+// mobile (no backtick key): triple-tap the name to open the shell
+let taps = [];
 document.addEventListener('click', () => {
+  const now = performance.now();
+  taps = taps.filter(t => now - t < 700);
+  taps.push(now);
+  if(taps.length === 3 && !term.classList.contains('on')){ taps = []; openTerm(); }
+});
+document.addEventListener('click', () => {
+  if(term.classList.contains('on')) return;
   if(!gifted){
     gifted = true;
     try{
